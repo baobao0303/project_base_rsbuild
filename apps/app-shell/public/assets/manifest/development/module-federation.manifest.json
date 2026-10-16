@@ -1,0 +1,4 @@
+{
+  "mfe-crm": "http://localhost:4204/mf-manifest.json",
+  "mfe-cdp": "http://localhost:4205/mf-manifest.json"
+}

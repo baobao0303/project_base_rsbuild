@@ -1,0 +1,45 @@
+{
+  "name": "angular-mfe-rsbuild-base",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "rsbuild dev --config apps/app-shell/rsbuild.config.ts --port 4200",
+    "start:shell": "rsbuild dev --config apps/app-shell/rsbuild.config.ts --port 4200",
+    "start:crm": "rsbuild dev --config apps/mfe-crm/rsbuild.config.ts --port 4204",
+    "start:cdp": "rsbuild dev --config apps/mfe-cdp/rsbuild.config.ts --port 4205",
+    "start:dev": "concurrently -k -n \"SHELL,CRM\" -c \"bgCyan.bold,bgGreen.bold\" \"npm:start:shell\" \"npm:start:crm\"",
+    "start:all": "concurrently -k -n \"SHELL,CRM,CDP\" -c \"bgCyan.bold,bgGreen.bold,bgMagenta.bold\" \"npm:start:shell\" \"npm:start:crm\" \"npm:start:cdp\"",
+    "build": "npm run build:shell && npm run build:crm && npm run build:cdp",
+    "build:shell": "rsbuild build --config apps/app-shell/rsbuild.config.ts",
+    "build:crm": "rsbuild build --config apps/mfe-crm/rsbuild.config.ts",
+    "build:cdp": "rsbuild build --config apps/mfe-cdp/rsbuild.config.ts",
+    "build:all": "npm run build",
+    "benchmark": "node scripts/benchmark.mjs",
+    "preview:shell": "rsbuild preview --config apps/app-shell/rsbuild.config.ts"
+  },
+  "dependencies": {
+    "@angular/animations": "~18.2.0",
+    "@angular/cdk": "~18.2.0",
+    "@angular/common": "~18.2.0",
+    "@angular/compiler": "~18.2.0",
+    "@angular/core": "~18.2.0",
+    "@angular/forms": "~18.2.0",
+    "@angular/platform-browser": "~18.2.0",
+    "@angular/platform-browser-dynamic": "~18.2.0",
+    "@angular/router": "~18.2.0",
+    "rxjs": "~7.8.0",
+    "zone.js": "~0.14.10"
+  },
+  "devDependencies": {
+    "@angular/compiler-cli": "~18.2.0",
+    "@module-federation/enhanced": "~0.6.0",
+    "@module-federation/rsbuild-plugin": "^0.6.16",
+    "@ng-rsbuild/plugin-angular": "^21.0.4",
+    "@rsbuild/core": "^1.3.0",
+    "@rsbuild/plugin-sass": "^1.5.3",
+    "concurrently": "^10.0.4",
+    "sass": "^1.80.3",
+    "typescript": "~5.5.2"
+  }
+}

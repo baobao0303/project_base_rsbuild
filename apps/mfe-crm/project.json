@@ -1,0 +1,7 @@
+{
+  "name": "mfe-crm",
+  "projectType": "application",
+  "prefix": "crm",
+  "sourceRoot": "apps/mfe-crm/src",
+  "tags": ["scope:remote"]
+}

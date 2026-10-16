@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.base.json",
+  "files": [],
+  "include": [],
+  "references": [
+    { "path": "./apps/app-shell/tsconfig.app.json" },
+    { "path": "./apps/mfe-crm/tsconfig.app.json" },
+    { "path": "./apps/mfe-cdp/tsconfig.app.json" }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "mfe-cdp",
+  "projectType": "application",
+  "prefix": "cdp",
+  "sourceRoot": "apps/mfe-cdp/src",
+  "tags": ["scope:remote"]
+}

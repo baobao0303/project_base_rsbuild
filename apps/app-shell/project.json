@@ -1,0 +1,7 @@
+{
+  "name": "app-shell",
+  "projectType": "application",
+  "prefix": "app",
+  "sourceRoot": "apps/app-shell/src",
+  "tags": ["scope:host"]
+}
