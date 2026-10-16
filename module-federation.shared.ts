@@ -53,7 +53,7 @@ export async function createFederatedConfig(options: RsbuildOptions) {
     isHost = false,
     appDir = `apps/${appName}`,
     port = isHost ? 4200 : 4204,
-    env = 'development',
+    env = (options.env || (process.env['APP_ENV'] as AppEnvironment) || (process.env['NODE_ENV'] === 'production' ? 'production' : 'development')),
     remotes = {},
     exposes,
     extraOptions = {},

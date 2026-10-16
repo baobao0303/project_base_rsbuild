@@ -1,0 +1,56 @@
+name: Docker Staging Build & Test
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target build environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - qa
+          - production
+
+jobs:
+  build-and-test:
+    name: Build Docker Image (Rsbuild Staging)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          build-args: |
+            APP_ENV=${{ github.event.inputs.environment || 'staging' }}
+          tags: project-base-rsbuild:${{ github.event.inputs.environment || 'staging' }}
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Smoke Test Container
+        run: |
+          docker run -d --name test-mfe -p 4200:80 project-base-rsbuild:${{ github.event.inputs.environment || 'staging' }}
+          sleep 4
+          curl -fsS http://localhost:4200/healthz
+          echo "✓ Healthcheck /healthz passed"
+          curl -fsS http://localhost:4200/ | head -n 5
+          echo "✓ Root Host Shell passed"
+          curl -fsS http://localhost:4200/crm/mf-manifest.json
+          echo "✓ CRM Remote manifest passed"
+          curl -fsS http://localhost:4200/cdp/mf-manifest.json
+          echo "✓ CDP Remote manifest passed"
+          docker rm -f test-mfe
