@@ -18,9 +18,38 @@ on:
           - production
 
 jobs:
+  bundle-size-audit:
+    name: Audit & Measure Bundle Size
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Compile Staging Bundle with Rsbuild
+        run: npm run build:staging
+
+      - name: Measure Bundle Sizing & Output Step Summary
+        run: npm run bundle:size
+
+      - name: Upload Bundle Size JSON Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-size-report
+          path: dist/bundle-size-report.json
+
   build-and-test:
     name: Build Docker Image (Rsbuild Staging)
     runs-on: ubuntu-latest
+    needs: [bundle-size-audit]
 
     steps:
       - name: Checkout Code

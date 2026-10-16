@@ -69,6 +69,16 @@ pipeline {
                 """
             }
         }
+
+        stage('5. Bundle Size Audit') {
+            steps {
+                sh """
+                    set -e
+                    echo "=== Inspecting Container Bundle Sizing Breakdown ==="
+                    docker exec ${CONTAINER_NAME} du -sh /usr/share/nginx/html /usr/share/nginx/html/crm /usr/share/nginx/html/cdp || true
+                """
+            }
+        }
     }
 
     post {
