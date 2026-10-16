@@ -4,12 +4,8 @@ import * as zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const distDir = path.resolve(__dirname, '../dist/apps');
-
-if (!fs.existsSync(distDir)) {
-  console.error('❌ dist/apps directory not found. Please run "npm run build" first.');
-  process.exit(1);
-}
+const distAppsDir = path.resolve(__dirname, '../dist/apps');
+const distRootDir = path.resolve(__dirname, '../dist');
 
 function formatSize(bytes) {
   if (bytes >= 1024 * 1024) {
@@ -18,9 +14,8 @@ function formatSize(bytes) {
   return `${(bytes / 1024).toFixed(2)} KB`;
 }
 
-function scanApp(appName) {
-  const appPath = path.join(distDir, appName);
-  if (!fs.existsSync(appPath)) return null;
+function scanDirectory(dirPath, appName, excludeSubdirs = []) {
+  if (!fs.existsSync(dirPath)) return null;
 
   let totalRaw = 0;
   let totalGzip = 0;
@@ -28,9 +23,12 @@ function scanApp(appName) {
   const breakdown = { js: 0, css: 0, html: 0, json: 0, other: 0 };
   const allFiles = [];
 
-  function walk(dir) {
-    for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
-      const full = path.join(dir, item.name);
+  function walk(currentDir) {
+    for (const item of fs.readdirSync(currentDir, { withFileTypes: true })) {
+      if (item.isDirectory() && excludeSubdirs.includes(item.name)) {
+        continue;
+      }
+      const full = path.join(currentDir, item.name);
       if (item.isDirectory()) {
         walk(full);
       } else {
@@ -38,7 +36,7 @@ function scanApp(appName) {
         const raw = buf.length;
         const gzipped = zlib.gzipSync(buf).length;
         const ext = path.extname(item.name).toLowerCase().replace('.', '');
-        const rel = path.relative(appPath, full);
+        const rel = path.relative(dirPath, full);
 
         totalRaw += raw;
         totalGzip += gzipped;
@@ -55,9 +53,7 @@ function scanApp(appName) {
     }
   }
 
-  walk(appPath);
-
-  // Sort files descending by raw size
+  walk(dirPath);
   allFiles.sort((a, b) => b.raw - a.raw);
 
   return {
@@ -70,8 +66,23 @@ function scanApp(appName) {
   };
 }
 
-const apps = ['app-shell', 'mfe-crm', 'mfe-cdp'];
-const results = apps.map(scanApp).filter(Boolean);
+let results = [];
+
+// Case 1: Traditional dist/apps layout
+if (fs.existsSync(distAppsDir)) {
+  results = ['app-shell', 'mfe-crm', 'mfe-cdp']
+    .map(name => scanDirectory(path.join(distAppsDir, name), name))
+    .filter(Boolean);
+} else if (fs.existsSync(distRootDir)) {
+  // Case 2: Unified Docker NGINX layout (dist/ contains app-shell, with dist/crm and dist/cdp)
+  const shell = scanDirectory(distRootDir, 'app-shell', ['crm', 'cdp']);
+  const crm = scanDirectory(path.join(distRootDir, 'crm'), 'mfe-crm');
+  const cdp = scanDirectory(path.join(distRootDir, 'cdp'), 'mfe-cdp');
+  results = [shell, crm, cdp].filter(Boolean);
+} else {
+  console.error('❌ Neither dist/apps nor dist/ found. Please build first.');
+  process.exit(1);
+}
 
 let grandTotalRaw = 0;
 let grandTotalGzip = 0;
