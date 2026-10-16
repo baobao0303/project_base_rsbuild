@@ -420,3 +420,136 @@ export const routes: Routes = [
 | **8** | **Tốc Độ Compile Rsbuild** | Thời gian build song song hoàn tất trong vòng dưới 25 giây. | Chạy `npm run workflow` đạt SLA |
 | **9** | **Docker Staging Ready** | Đóng gói thành công qua Dockerfile multi-stage, pass healthcheck `/healthz`. | `docker build` và `curl http://localhost:4200/healthz` |
 | **10**| **Checklist Code Review** | Mã nguồn TypeScript sử dụng Standalone Component, Signals, và Reactive Forms. | Peer Review theo chuẩn cursor rule Angular 2026 |
+
+
+---
+
+# PHẦN 8: BÁO CÁO KHẢO SÁT & KẾ HOẠCH TRIỂN KHAI VÀO DỰ ÁN `wicx-crm-fe`
+## (WICX-CRM-FE CODEBASE SURVEY & INTEGRATION BLUEPRINT)
+
+Dựa trên khảo sát thực tế toàn diện cấu trúc mã nguồn dự án **`projects/wicx-crm-fe`**, phần này định nghĩa chính xác hiện trạng, điểm chạm kiến trúc và các bước tích hợp màn hình Customer 360 vào monorepo production của công ty:
+
+---
+
+### 8.1 Khảo Sát Hiện Trạng Codebase `projects/wicx-crm-fe`
+
+1. **Kiến Trúc Đang Hoạt Động**:
+   - Monorepo Nx 20 quản trị 5 ứng dụng con: `app-shell` (Host), `mfe-account`, `mfe-cdp`, `mfe-crm`, `mfe-dashboard`.
+   - Engine biên dịch: **Rsbuild v1.7.6** kết hợp Module Federation 2.0 (`@module-federation/rsbuild-plugin`) qua file dùng chung `module-federation.shared.ts`.
+   - Hệ thống thư viện chia sẻ nội bộ: `@wicx/core`, `@wi-mfes/i18n`, `@wi-mfes/context`, `@wi-mfes/remote-loader`, và **`tds-ui` (v18.5.2)**.
+
+2. **Hiện Trạng Remote `apps/mfe-crm`**:
+   - Hiện tại `apps/mfe-crm` mới chỉ có màn hình placeholder cơ bản tại `apps/mfe-crm/src/app/remote-entry/entry.component.html` hiển thị tiêu đề *"Lịch hẹn"*.
+   - Chưa có phân hệ chi tiết Deal / Chăm sóc khách hàng hoàn chỉnh.
+   - Do đó, việc triển khai `Customer360DetailComponent` vào `apps/mfe-crm` là hoàn toàn khả thi, không gây xung đột kiến trúc và nâng cấp trực tiếp giá trị nghiệp vụ cho phân hệ CRM.
+
+3. **Hiện Trạng Router Nạp Remote Tại Host Shell (`apps/app-shell/src/app/app.routes.ts`)**:
+   - Host Shell đã cấu hình route `:id/crm` trỏ vào remote module `mfe-crm`:
+     ```typescript
+     {
+       path: 'crm',
+       title: 'CRM.TITLE',
+       providers: provideWII18n({ remoteName: 'mfe-crm', modules: ['crm'] }),
+       resolve: { i18n: i18nResolver },
+       loadChildren: () => loadRemoteMfeRoutes('mfe-crm').catch(handleRemoteError('mfe-crm')),
+     }
+     ```
+   - Cơ chế nạp đa ngôn ngữ (`provideWII18n`) và bộ giải quyết lỗi (`handleRemoteError`) đã hoàn thiện 100%.
+
+---
+
+### 8.2 Điểm Chạm Kiến Trúc Khi Tích Hợp (Architecture Touchpoints)
+
+| Tệp Cần Chạm Đến Trong `wicx-crm-fe` | Thao Tác Kỹ Thuật | Mục Đích |
+| :--- | :--- | :--- |
+| **`apps/mfe-crm/src/app/features/customer360/`** | **Tạo mới thư mục & component** | Chứa `Customer360DetailComponent` (View, DTO, Service). |
+| **`apps/mfe-crm/src/app/remote-entry/entry.routes.ts`** | **Bổ sung route con** | Định tuyến `path: ':id'` và `path: 'deal-detail'` nạp component 360. |
+| **`apps/mfe-crm/rsbuild.config.ts`** | **Bổ sung exposes** | Thêm `'./Customer360': './apps/mfe-crm/src/app/features/customer360/customer360-detail.component.ts'`. |
+| **`apps/mfe-crm/public/assets/i18n/vi/crm.json`** | **Bổ sung từ khóa ngôn ngữ** | Thêm translations cho `CUSTOMER_360`, `DEAL`, `TIMELINE`, `ACTION`. |
+| **`apps/mfe-crm/project.json`** | **Giữ nguyên target build-rsbuild** | Không cần thay đổi build executor, Rsbuild tự động bundle component mới. |
+
+---
+
+### 8.3 Kế Hoạch 4 Bước Triển Khai Thực Tế Cho Lead Dev & Peer Dev
+
+#### Bước 1: Khởi tạo Component tại `apps/mfe-crm`
+Tạo tệp `apps/mfe-crm/src/app/features/customer360/customer360-detail.component.ts` áp dụng chính xác mã nguồn Angular Standalone từ **Phần 5** của tài liệu này. Đảm bảo import đầy đủ các modules TDS UI có sẵn trong dự án: `TDSCardModule`, `TDSAvatarModule`, `TDSTagModule`, `TDSButtonModule`, `TDSTimelineModule`, `TDSDividerModule`.
+
+#### Bước 2: Cập Nhật Routing tại Remote `mfe-crm`
+Mở `apps/mfe-crm/src/app/remote-entry/entry.routes.ts`, cấu hình router đa tầng:
+
+```typescript
+import { Route } from '@angular/router';
+import { provideWII18n } from '@wicx/core';
+import { RemoteEntryComponent } from './entry.component';
+
+export const remoteRoutes: Route[] = [
+  {
+    path: '',
+    title: 'CRM.TITLE',
+    providers: provideWII18n({ remoteName: 'mfe-crm', modules: ['crm'] }),
+    component: RemoteEntryComponent,
+    children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        redirectTo: 'detail',
+      },
+      {
+        path: 'detail',
+        title: 'CRM.CUSTOMER_360.TITLE',
+        loadComponent: () =>
+          import('../features/customer360/customer360-detail.component').then(
+            (m) => m.Customer360DetailComponent
+          ),
+      },
+      {
+        path: ':id',
+        title: 'CRM.CUSTOMER_360.TITLE',
+        loadComponent: () =>
+          import('../features/customer360/customer360-detail.component').then(
+            (m) => m.Customer360DetailComponent
+          ),
+      },
+    ],
+  },
+  {
+    path: '**',
+    redirectTo: '/error/not-found',
+  },
+];
+```
+
+#### Bước 3: Expose Module Trong Rsbuild Config
+Mở `apps/mfe-crm/rsbuild.config.ts`, khai báo expose trực tiếp cho Host gọi độc lập khi cần:
+
+```typescript
+import { createRsbuildConfig } from '../../module-federation.shared';
+
+export default async () => {
+  return await createRsbuildConfig({
+    appName: 'mfe-crm',
+    port: 4204,
+    exposes: {
+      './Customer360': './apps/mfe-crm/src/app/features/customer360/customer360-detail.component.ts',
+      './Routes': './apps/mfe-crm/src/app/remote-entry/entry.routes.ts',
+    },
+  });
+};
+```
+
+#### Bước 4: Kiểm Định Build & Khởi Chạy Local
+Chạy kịch bản kiểm tra độc lập tại `projects/wicx-crm-fe`:
+
+```bash
+# 1. Chạy lẻ Remote CRM để test giao diện
+npm run start:crm
+
+# 2. Chạy kèm Host Shell kiểm tra liên kết điều hướng Micro-Frontend
+npm run start:dev
+# Mở trình duyệt: http://localhost:4200/<tenantId>/crm/detail
+
+# 3. Kiểm định thời gian biên dịch Rsbuild
+npm run build:crm
+# Đảm bảo compile hoàn tất dưới 5 giây, không phát sinh lỗi injector hoặc warning CORS.
+```
