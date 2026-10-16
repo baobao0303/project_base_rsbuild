@@ -2,17 +2,25 @@ import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AnalyticsDashboardComponent } from './features/analytics/analytics-dashboard.component';
 import { CustomerGridComponent } from './features/customers/customer-grid.component';
+import { OlapSqlConsoleComponent } from './features/olap-sql/olap-sql-console.component';
+import { SpreadsheetMatrixComponent } from './features/spreadsheet/spreadsheet-matrix.component';
 
 @Component({
   selector: 'app-crm-root',
   standalone: true,
-  imports: [CommonModule, AnalyticsDashboardComponent, CustomerGridComponent],
+  imports: [
+    CommonModule,
+    AnalyticsDashboardComponent,
+    CustomerGridComponent,
+    OlapSqlConsoleComponent,
+    SpreadsheetMatrixComponent
+  ],
   template: `
     <div class="crm-container">
       <div class="header">
         <div class="title-group">
           <h1>CRM & Analytics Enterprise Suite</h1>
-          <p>Pre-bundled with 10,000 live customer records & 365-day timeseries data (Rsbuild Benchmark Target)</p>
+          <p>Pre-bundled with 10,000 customers & 25,000 OLAP records (~13.6MB data chunks) for Rsbuild Benchmark</p>
         </div>
 
         <div class="tab-pills">
@@ -22,7 +30,7 @@ import { CustomerGridComponent } from './features/customers/customer-grid.compon
             (click)="activeTab.set('analytics')"
           >
             <span class="icon">📈</span>
-            <span class="label">Heavy Analytics Dashboard</span>
+            <span class="label">Analytics Dashboard</span>
           </button>
           <button
             class="pill-btn"
@@ -30,7 +38,23 @@ import { CustomerGridComponent } from './features/customers/customer-grid.compon
             (click)="activeTab.set('customers')"
           >
             <span class="icon">👥</span>
-            <span class="label">High-Volume 10,000 Customer Grid</span>
+            <span class="label">Customer Grid</span>
+          </button>
+          <button
+            class="pill-btn"
+            [class.active]="activeTab() === 'olap'"
+            (click)="activeTab.set('olap')"
+          >
+            <span class="icon">⚡</span>
+            <span class="label">In-Browser OLAP SQL (25k)</span>
+          </button>
+          <button
+            class="pill-btn"
+            [class.active]="activeTab() === 'spreadsheet'"
+            (click)="activeTab.set('spreadsheet')"
+          >
+            <span class="icon">📑</span>
+            <span class="label">Spreadsheet Pivot Matrix</span>
           </button>
         </div>
       </div>
@@ -38,6 +62,8 @@ import { CustomerGridComponent } from './features/customers/customer-grid.compon
       <div class="tab-content">
         <crm-analytics-dashboard *ngIf="activeTab() === 'analytics'"></crm-analytics-dashboard>
         <crm-customer-grid *ngIf="activeTab() === 'customers'"></crm-customer-grid>
+        <crm-olap-sql-console *ngIf="activeTab() === 'olap'"></crm-olap-sql-console>
+        <crm-spreadsheet-matrix *ngIf="activeTab() === 'spreadsheet'"></crm-spreadsheet-matrix>
       </div>
     </div>
   `,
@@ -75,17 +101,18 @@ import { CustomerGridComponent } from './features/customers/customer-grid.compon
       padding: 4px;
       border-radius: 10px;
       gap: 4px;
+      flex-wrap: wrap;
     }
     .pill-btn {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 16px;
+      padding: 8px 14px;
       border-radius: 8px;
       border: none;
       background: transparent;
       color: #475569;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -99,10 +126,10 @@ import { CustomerGridComponent } from './features/customers/customer-grid.compon
       box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
     }
     .pill-btn .icon {
-      font-size: 15px;
+      font-size: 14px;
     }
   `]
 })
 export class CrmRootComponent {
-  activeTab = signal<'analytics' | 'customers'>('analytics');
+  activeTab = signal<'analytics' | 'customers' | 'olap' | 'spreadsheet'>('analytics');
 }
